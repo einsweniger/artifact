@@ -17,7 +17,7 @@ import Artifacts.View as View
 
 view : Model -> Artifacts -> Html AppMsg
 view model artifacts =
-  div []
+  div [ id "list_view" ]
     [ nav artifacts
     -- select / search bar
     , div [ class "clearfix py1" ]
@@ -30,13 +30,15 @@ view model artifacts =
 -- navigation toolbar
 nav : Artifacts -> Html AppMsg
 nav artifacts = 
-  div [ class "clearfix mb2 white bg-black", id "list_view" ]
+  div [ class "clearfix mb2 white bg-black" ]
     [ div [ class "left p2" ] [ text "Artifacts" ]
     ]
 
 -- SELECT COL
 
 -- select which attrs to view
+--
+-- ids: select_col_{arts, partof, text, def-at, done}
 select : Model -> Html AppMsg
 select model =
   let
@@ -71,6 +73,9 @@ selectColBtn name visible setter =
 
 -- SEARCH
 
+-- specify what to search for
+--
+-- ids: search_input, search_attr_{name, parts, partof, text}
 searchBar : Model -> Html AppMsg
 searchBar model =
   let
