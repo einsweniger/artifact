@@ -20,13 +20,16 @@ artifactLinkRegex : Regex.Regex
 artifactLinkRegex = 
   Regex.caseInsensitive <| Regex.regex <| "\\[\\[(" ++ artifactValidRaw ++ ")\\]\\]"
 
+-- the entire view
+--
+-- ids: unedited_head
 view : Model -> Artifact -> Html AppMsg
 view model artifact =
   let 
     edit = if isJust artifact.edited && (not model.settings.readonly) then
       [ form model artifact artifact.edited
       -- Header for original view
-      , h1 [id "uneditedhead"] [ text "Previous:" ]
+      , h1 [id "unedited_head"] [ text "Previous:" ]
       ]
     else
       []
@@ -95,6 +98,9 @@ formColumnTwo model artifact edited =
     , displayText model artifact edited
     ]
 
+-- select which text view to see (raw or rendered)
+--
+-- ids = {ed_, rd_}_text_{raw, rendered}
 selectRenderedBtns : Model -> Bool -> Html AppMsg
 selectRenderedBtns model editable =
   let
@@ -107,7 +113,13 @@ selectRenderedBtns model editable =
         else
           { view | rendered_read = render }
 
+    getId id_ = if editable then
+      id ("rd_" ++ id_) -- read
+    else
+      id ("ed_" ++ id_) -- edit
+
     textView = model.state.textView
+
     (rendered_clr, raw_clr) = if getRendered model editable then
       ("black", "gray")
     else
@@ -116,11 +128,13 @@ selectRenderedBtns model editable =
     span []
       [ button -- rendered
         [ class ("btn bold " ++ rendered_clr)
+        , getId "text_rendered"
         , onClick <| ArtifactsMsg <| ChangeTextViewState <| newView True
         ]
         [ text "rendered" ]
       , button -- raw
         [ class ("btn bold " ++ raw_clr)
+        , getId "text_raw"
         , onClick <| ArtifactsMsg <| ChangeTextViewState <| newView False
         ]
         [ text "raw" ]
@@ -136,6 +150,7 @@ getRendered model edit =
     else
       view.rendered_read
 
+
 displayText : Model -> Artifact -> Maybe EditableArtifact -> Html AppMsg
 displayText model artifact edited =
   if getRendered model (isJust edited) then
@@ -143,7 +158,10 @@ displayText model artifact edited =
   else
     displayRawText model artifact edited
 
+
 -- display raw text in a way that can be edited
+--
+-- ids: {rd, ed}_text_(artifact.name.value)
 displayRawText : Model -> Artifact -> Maybe EditableArtifact -> Html AppMsg
 displayRawText model artifact edited =
   let
@@ -171,23 +189,37 @@ displayRawText model artifact edited =
   in
     textarea attrs [ text rawText ]
 
+-- BUTTONS
+
+-- navigate back to the list page
+--
+-- ids: list
 listBtn : Html AppMsg
 listBtn =
   button
     [ class "btn regular"
+    , id "list"
     , onClick (ArtifactsMsg ShowArtifacts)
     ]
     [ i [ class "fa fa-chevron-left mr1" ] [], text "List" ]
 
+
+-- start/stop editing
+--
+-- ids: edit/cancel_edit
 editBtn : Artifact -> Bool -> Html AppMsg
 editBtn artifact in_progress =
   button
-    [ class "btn regular"
-    , if in_progress then
-      onClick (ArtifactsMsg (CancelEditArtifact artifact.id))
+    ([ class "btn regular"
+    ] ++ if in_progress then 
+      [ id "cancel_edit"
+      , onClick (ArtifactsMsg (CancelEditArtifact artifact.id))
+      ]
     else
-      onClick (ArtifactsMsg (EditArtifact artifact.id (getEditable artifact)))
-    ]
+      [ id "edit"
+      , onClick (ArtifactsMsg (EditArtifact artifact.id (getEditable artifact)))
+      ]
+    )
     [ i [ class "fa fa-pencil mr1" ] []
     , text (if in_progress then 
       "Cancel"
@@ -195,15 +227,21 @@ editBtn artifact in_progress =
       "Edit")
     ]
 
+-- save the current edit state. This button does not always exist.
+--
+-- ids: save
 saveBtn : Artifact -> Html AppMsg
 saveBtn artifact =
   button
     [ class "btn regular"
+    , id "save"
     , onClick <| ArtifactsMsg <| SaveArtifact artifact.id
     ]
     [ i [ class "fa fa-floppy-o mr1" ] []
     , text "Save"
     ]
+
+-- HELPERS
 
 -- get the full url to a single artifact
 fullArtifactUrl : Model -> String -> String

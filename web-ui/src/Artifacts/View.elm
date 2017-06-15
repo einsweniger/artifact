@@ -61,9 +61,12 @@ testedPerc artifact =
     span [ class ("bold " ++ color) ] 
       [ text <| (String.left 3 (toString (artifact.tested * 100))) ++ "%" ]
 
+-- TODO: add editing of path
 defined : Model -> Artifact -> Html AppMsg
 defined model artifact =
-  div [] 
+  div 
+  [ getId "path" Nothing
+  ] 
   [ span [class "bold" ] [ text "Defined at: " ]
   , text artifact.path
   ]
@@ -90,19 +93,23 @@ implemented model artifact =
     )
 
 -- just the message, nothing else
+-- TODO: enable editing
 implementedBasic : Model -> Artifact -> Html m
 implementedBasic model artifact = 
-  (case (artifact.code, artifact.done) of
-    (Just loc, Nothing) ->
-      text (loc.path ++ "[" ++ (toString loc.line) ++ "]")
-    (Nothing, Just done) ->
-      text done
-    (Nothing, Nothing) ->
-      span [ class "italic gray" ] [ text "not directly implemented" ]
-    (Just _, Just _) ->
-      -- TODO: send error message
-      span [ class "bold red" ] [ text "ERROR: code+done both set" ]
-  )
+  let
+    (s, t) = case (artifact.code, artifact.done) of
+      (Just loc, Nothing) ->
+        ([], loc.path ++ "[" ++ (toString loc.line) ++ "]")
+      (Nothing, Just done) ->
+        ([], done)
+      (Nothing, Nothing) ->
+        ([ class "italic gray" ], "not directly implemented")
+      (Just _, Just _) ->
+        -- TODO: send error message
+        ([ class "bold red" ], "ERROR: code+done both set")
+  in
+    span (s ++ [getId "implemented" Nothing]) [ text t ]
+
 
 parts : Model -> Artifact -> Html AppMsg
 parts model artifact =
@@ -182,9 +189,9 @@ seeArtifact : Model -> Artifact -> Html AppMsg
 seeArtifact model artifact =
   a 
     [ class ("btn bold " ++ (artifactColor artifact))
+    , id artifact.name.value
     , onClick (ArtifactsMsg <| ShowArtifact <| artifact.name.value)
     , href (artifactNameUrl artifact.name.value)
-    , id artifact.name.value
     ]
     [ text (artifact.name.raw ++ "  ") ]
 
@@ -203,9 +210,9 @@ seeArtifactName model name parent attr =
     if memberArtifact indexName model then
       a 
         [ class ("btn bold " ++ color)
+        , id <| parent.name.value ++ attr ++ name
         , href url
         , onClick ( ArtifactsMsg <| ShowArtifact <| indexName ) 
-        , id <| parent.name.value ++ attr ++ name
         ] [ text name ]
     else
       span [ class ("btn " ++ color) ] [ text name ]
