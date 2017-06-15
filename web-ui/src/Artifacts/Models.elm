@@ -167,7 +167,6 @@ initialColumns =
 
 type alias Search =
   { pattern : String  -- the pattern to search for
-  , regex : Bool      -- whether to use regex or raw-string
   , name : Bool    
   , parts : Bool
   , partof : Bool
@@ -177,7 +176,6 @@ type alias Search =
 initialSearch : Search
 initialSearch =
   { pattern = ""
-  , regex = False
   , name = True
   , parts = False
   , partof = False

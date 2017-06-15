@@ -30,7 +30,7 @@ view model artifacts =
 -- navigation toolbar
 nav : Artifacts -> Html AppMsg
 nav artifacts = 
-  div [ class "clearfix mb2 white bg-black" ]
+  div [ class "clearfix mb2 white bg-black", id "list_view" ]
     [ div [ class "left p2" ] [ text "Artifacts" ]
     ]
 
@@ -63,6 +63,7 @@ selectColBtn name visible setter =
   in
     button
       [ class ("btn bold " ++ color)
+      , id <| "select_col_" ++ name
       , onClick <| ArtifactsMsg <| ChangeColumns <|setter <| not visible
       ]
       [ text name ]
@@ -74,7 +75,6 @@ searchBar : Model -> Html AppMsg
 searchBar model =
   let
     sch = model.state.search
-    regex = sch.regex
   in
     span []
       [ span [ class "bold" ] [ text "Search: " ]
@@ -83,13 +83,13 @@ searchBar model =
       , searchAttrBtn "partof" sch.partof (\s -> { sch | partof = s })
       , searchAttrBtn "text" sch.text (\s -> { sch | text = s })
       , searchInput sch
-      , searchAttrBtn "as-regex" sch.regex (\s -> { sch | regex = s })
       ]
 
 searchInput : Search -> Html AppMsg
 searchInput sch =
   input 
-    [ size 40
+    [ id "search_input"
+    , size 40
     , readonly False
     , onInput (\t -> (ArtifactsMsg (ChangeSearch { sch | pattern = t })))
     ] 
@@ -105,6 +105,7 @@ searchAttrBtn name sel setter =
   in
     button
       [ class ("btn bold " ++ color)
+      , id <| "search_" ++ name
       , onClick <| ArtifactsMsg <| ChangeSearch <| setter (not sel)
       ]
       [ text name ]
@@ -114,12 +115,8 @@ search : Model -> List Artifact
 search model =
   let
     sch = model.state.search
-    pat_str = if sch.regex then
-      sch.pattern
-    else
-      Regex.escape sch.pattern
-
-    pat = Regex.caseInsensitive (Regex.regex pat_str)
+    pat_str = Regex.escape sch.pattern
+    pat = Regex.caseInsensitive <| Regex.regex pat_str
 
     -- first arg is whether to even try
     trySearch : Bool -> String -> Bool

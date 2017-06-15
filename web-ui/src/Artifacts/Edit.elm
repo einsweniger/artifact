@@ -34,7 +34,7 @@ view model artifact =
     else
       []
   in
-    div []
+    div [ id "edit_view" ]
       ([nav model artifact] 
       ++ edit 
       ++ [form model artifact Nothing])
