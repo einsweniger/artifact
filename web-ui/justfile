@@ -12,8 +12,8 @@
 	sed -e 's/<head>/<head><link rel="stylesheet" type="text\/css" href="css\/index.css" \/>/g' dist/index.html -i
 	(cd dist && tar -cvf ../../src/cmd/data/web-ui-static.tar *)
 
-build: build build-static
-	@echo "-- elm build complete"
+build: build-server build-static
+	@echo "-- full elm build complete"
 
 @test:
 	elm test

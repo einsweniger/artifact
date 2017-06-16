@@ -7,26 +7,23 @@ version = `sed -En 's/version = "([^"]+)"/\1/p' Cargo.toml | head -n1`
 target = "$PWD/target"
 target_nightly = target + "/nightly"
 target_nightly_app = target_nightly + "/debug/art"
-nightly = "CARGO_TARGET_DIR=" + target_nightly + " CARGO_INCREMENTAL=1 rustup run nightly"
+rustup_nightly = " CARGO_INCREMENTAL=1 rustup run nightly"
+nightly = "CARGO_TARGET_DIR=" + target_nightly + rustup_nightly
 export_nightly = "export TARGET_BIN=" + target_nightly_app + " && "
-
-echo TEST='justfile':
-	@echo "This is a {{TEST}}"
 
 echo-version:
 	echo {{version}}
-
-doc:
-	cargo doc --open
-
 
 ##################################################
 # build commands
 
 build:
-	just web-ui/build-full
+	just web-ui/build 
+	just build-rust
+
+build-rust:
 	{{nightly}} cargo build --features server
-	@echo "built binary to: {{target_nightly_app}}"
+	@echo "-- built binary to: {{target_nightly_app}}"
 
 # current "release" build includes only exporting static html
 build-static: 
@@ -41,17 +38,18 @@ test TESTS="":
 	{{nightly}} cargo test --lib --features server {{TESTS}}
 
 lint: # run linter
-	CARGO_TARGET_DIR={{target}}/nightly rustup run nightly cargo clippy --features server
+	{{nightly}} cargo clippy --features server
 	
-test-server-only:
-	{{nightly}} cargo test --lib --features server
-
-test-server: # run the test-server for e2e testing, still in development
-	just test-server-only
-
 test-e2e: # run e2e tests, still in development
 	just build
 	{{export_nightly}} py.test2 web-ui/e2e_tests/basic.py -sx
+
+@test-all:
+	just check-fmt
+	art check
+	just lint
+	just test
+	just test-e2e
 
 
 ##################################################
@@ -86,20 +84,16 @@ fmt:
 check-fmt:
 	cargo fmt -- --write-mode=diff
 
-check: check-fmt
-	art check
-
 git-verify: # make sure git is clean and on master
 	git branch | grep '* master'
 	git diff --no-ext-diff --quiet --exit-code
 
-publish: # publish to github and crates.io
+# publish to github and crates.io
+publish: 
 	just git-verify lint build-static
-	just test
-	just self-check
+	just lint test self-check
 	git commit -a -m "v{{version}} release"
-	just publish-cargo
-	just publish-git
+	just publish-cargo publish-git
 
 export-site: build-static
 	rm -rf _gh-pages/index.html _gh-pages/css
