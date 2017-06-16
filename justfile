@@ -40,16 +40,19 @@ test TESTS="":
 lint: # run linter
 	{{nightly}} cargo clippy --features server
 	
-test-e2e: # run e2e tests, still in development
+test-sel: # run sel tests, still in development
 	just build
-	{{export_nightly}} py.test2 web-ui/e2e_tests/basic.py -sx
+	test-sel-py
+
+test-sel-py: # run sel tests, still in development
+	{{export_nightly}} py.test2 web-ui/sel_tests/basic.py -sx
 
 @test-all:
 	just check-fmt
 	art check
 	just lint
 	just test
-	just test-e2e
+	just test-selenium
 
 
 ##################################################
@@ -61,10 +64,6 @@ run ARGS="": # run the api server (without the web-ui)
 
 serve-rust: 
 	{{nightly}} cargo run --features server -- -vv serve
-
-serve-e2e:
-	just web-ui/build
-	{{nightly}} cargo run --features server -- --work-tree web-ui/e2e_tests/ex_proj serve
 
 serve: # run the full frontend
 	just web-ui/build

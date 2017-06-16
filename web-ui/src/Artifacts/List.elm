@@ -120,8 +120,7 @@ search : Model -> List Artifact
 search model =
   let
     sch = model.state.search
-    pat_str = Regex.escape sch.pattern
-    pat = Regex.caseInsensitive <| Regex.regex pat_str
+    pat = Regex.caseInsensitive <| Regex.regex sch.pattern
 
     -- first arg is whether to even try
     trySearch : Bool -> String -> Bool
@@ -203,11 +202,10 @@ list model =
   in
     div [ class "p2" ]
       [ table [ ]
-        [ thead [] -- thead == table-header object
-          [ tr []  -- table row
-            header
+        [ thead [ id "list_head" ] -- thead == table-header object
+          [ tr [] header
           ]
-        , tbody [] (List.map2 artifactRow model_list sorted)
+        , tbody [ id "list_items" ] (List.map2 artifactRow model_list sorted)
         ]
       ]
 

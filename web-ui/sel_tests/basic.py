@@ -29,7 +29,7 @@ class TestRead(unittest.TestCase):
         self.stdout = tempfile.NamedTemporaryFile("rb+")
         cmd = [
             TARGET_ART,
-            "--work-tree", "web-ui/e2e_tests/ex_proj",
+            "--work-tree", "web-ui/sel_tests/ex_proj",
             "serve"
         ]
         self.art = subprocess.Popen(cmd, bufsize=1, stdout=self.stdout)
@@ -85,7 +85,7 @@ class TestRead(unittest.TestCase):
         with self.assertRaises(NoSuchElementException):
             driver.find_element_by_id(rd_partof)
 
-        # open and assert
+        # open columns and assert
         parts_list = driver.find_element_by_id("rd_parts_" + name)
         assert expected_parts == get_items(parts_list)
 
@@ -94,7 +94,7 @@ class TestRead(unittest.TestCase):
             EC.presence_of_element_located((By.ID, rd_partof)))
         assert expected_partof == get_items(partof_list)
 
-        # now close
+        # now close columns and assert
         driver.find_element_by_id("select_col_parts").click()
         WebDriverWait(driver, 1).until(
             EC.invisibility_of_element_located((By.ID, rd_parts)))
