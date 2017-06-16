@@ -22,31 +22,23 @@ doc:
 
 ##################################################
 # build commands
+
 build:
-	{{nightly}} cargo build
+	just web-ui/build-full
+	{{nightly}} cargo build --features server
 	@echo "built binary to: {{target_nightly_app}}"
 
-# full build for a std release. Currently doesn't include the server code
+# current "release" build includes only exporting static html
 build-static: 
 	just web-ui/build-static
 	just build
 
-build-server:
-	just web-ui/build
-	{{nightly}} cargo build --features server
-
 
 ##################################################
 # unit testing/linting commands
-test:
-	{{nightly}} cargo test --lib --features server
-
-test-all: 
+test TESTS="":
 	@just web-ui/test
-	@just test
-
-filter PATTERN: # run only specific tests
-	RUST_BACKTRACE=1 cargo test --lib {{PATTERN}}
+	{{nightly}} cargo test --lib --features server {{TESTS}}
 
 lint: # run linter
 	CARGO_TARGET_DIR={{target}}/nightly rustup run nightly cargo clippy --features server
@@ -58,7 +50,7 @@ test-server: # run the test-server for e2e testing, still in development
 	just test-server-only
 
 test-e2e: # run e2e tests, still in development
-	just build-server
+	just build
 	{{export_nightly}} py.test2 web-ui/e2e_tests/basic.py -sx
 
 
@@ -101,8 +93,10 @@ git-verify: # make sure git is clean and on master
 	git branch | grep '* master'
 	git diff --no-ext-diff --quiet --exit-code
 
-#publish: git-verify lint build-static test-all self-check # publish to github and crates.io
-publish: git-verify build-static test-all self-check # publish to github and crates.io
+publish: # publish to github and crates.io
+	just git-verify lint build-static
+	just test
+	just self-check
 	git commit -a -m "v{{version}} release"
 	just publish-cargo
 	just publish-git
