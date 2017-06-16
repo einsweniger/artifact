@@ -5,7 +5,13 @@
 # constants
 version = `sed -En 's/version = "([^"]+)"/\1/p' Cargo.toml | head -n1`
 target = "$PWD/target"
-nightly = "CARGO_TARGET_DIR=$TG/nightly CARGO_INCREMENTAL=1 rustup run nightly"
+target_nightly = target + "/nightly"
+target_nightly_app = target_nightly + "/debug/art"
+nightly = "CARGO_TARGET_DIR=" + target_nightly + " CARGO_INCREMENTAL=1 rustup run nightly"
+export_nightly = "export TARGET_BIN=" + target_nightly_app + " && "
+
+echo TEST='justfile':
+	@echo "This is a {{TEST}}"
 
 echo-version:
 	echo {{version}}
@@ -16,42 +22,28 @@ doc:
 
 ##################################################
 # build commands
-build-dev: # build using nightly and incremental compilation
-	TG={{target}} {{nightly}} cargo build
-	echo "built binary to: target/nightly/debug/art"
-
-build-elm: # build just elm (not rust)
-	(cd web-ui; npm run build)
-	(cd web-ui/dist; tar -cvf ../../src/api/data/web-ui.tar *)
-
-build-static: # build and package elm as a static index.html
-	(cd web-ui; elm make src/Main-Static.elm)
-	rm -rf target/web
-	mkdir target/web
-	cp web-ui/index.html target/web
-	cp -r web-ui/css target/web
-	# copy and link the style sheets
-	sed -e 's/<title>Main<\/title>/<title>Design Documents<\/title>/g' target/web/index.html -i
-	sed -e 's/<head>/<head><link rel="stylesheet" type="text\/css" href="css\/index.css" \/>/g' target/web/index.html -i
-	(cd target/web; tar -cvf ../../src/cmd/data/web-ui-static.tar *)
+build:
+	{{nightly}} cargo build
+	@echo "built binary to: {{target_nightly_app}}"
 
 # full build for a std release. Currently doesn't include the server code
-build-full: build-static
-	just build-dev
+build-static: 
+	just web-ui/build-static
+	just build
+
+build-server:
+	just web-ui/build
+	{{nightly}} cargo build --features server
 
 
 ##################################################
 # unit testing/linting commands
-test: # do tests with web=false
-	RUST_BACKTRACE=1 cargo test --lib
+test:
+	{{nightly}} cargo test --lib --features server
 
-test-dev: # test using nightly and incremental compilation
-	TG={{target}} {{nightly}} cargo test --lib
-
-test-elm: 
-	(cd web-ui; elm test)
-
-test-all: test-elm test
+test-all: 
+	@just web-ui/test
+	@just test
 
 filter PATTERN: # run only specific tests
 	RUST_BACKTRACE=1 cargo test --lib {{PATTERN}}
@@ -60,32 +52,36 @@ lint: # run linter
 	CARGO_TARGET_DIR={{target}}/nightly rustup run nightly cargo clippy --features server
 	
 test-server-only:
-	TG={{target}} {{nightly}} cargo test --lib --features server
+	{{nightly}} cargo test --lib --features server
 
-test-server: build-elm # run the test-server for e2e testing, still in development
+test-server: # run the test-server for e2e testing, still in development
 	just test-server-only
 
 test-e2e: # run e2e tests, still in development
-	cd web-ui; py.test2 e2e_tests/basic.py
+	just build-server
+	{{export_nightly}} py.test2 web-ui/e2e_tests/basic.py -sx
 
 
 ##################################################
 # running commands
 
-api: # run the api server (without the web-ui)
-	cargo run -- -v server
+# run with `just run -- {{args}}`
+run ARGS="": # run the api server (without the web-ui)
+	{{nightly}} cargo run -- -v {{ARGS}}
 
 serve-rust: 
-	TG={{target}} {{nightly}} cargo run --features server -- -vv serve
+	{{nightly}} cargo run --features server -- -vv serve
 
-serve-e2e: build-elm
-	TG={{target}} {{nightly}} cargo run --features server -- --work-tree web-ui/e2e_tests/ex_proj serve
+serve-e2e:
+	just web-ui/build
+	{{nightly}} cargo run --features server -- --work-tree web-ui/e2e_tests/ex_proj serve
 
-serve: build-elm  # run the full frontend
+serve: # run the full frontend
+	just web-ui/build
 	just serve-rust
 
 self-check: # build self and run `art check` using own binary
-	TG={{target}} {{nightly}} cargo run -- check
+	{{nightly}} cargo run -- check
 
 
 ##################################################
@@ -105,19 +101,19 @@ git-verify: # make sure git is clean and on master
 	git branch | grep '* master'
 	git diff --no-ext-diff --quiet --exit-code
 
-#publish: git-verify lint build-full test-all self-check # publish to github and crates.io
-publish: git-verify build-full test-all self-check # publish to github and crates.io
+#publish: git-verify lint build-static test-all self-check # publish to github and crates.io
+publish: git-verify build-static test-all self-check # publish to github and crates.io
 	git commit -a -m "v{{version}} release"
 	just publish-cargo
 	just publish-git
 
-export-site: build-full
+export-site: build-static
 	rm -rf _gh-pages/index.html _gh-pages/css
-	TG={{target}} {{nightly}} cargo run -- export html && mv index.html css _gh-pages
+	{{nightly}} cargo run -- export html && mv index.html css _gh-pages
 
 publish-site: export-site
 	rm -rf _gh-pages/index.html _gh-pages/css
-	TG={{target}} {{nightly}} cargo run -- export html && mv index.html css _gh-pages
+	{{nightly}} cargo run -- export html && mv index.html css _gh-pages
 	(cd _gh-pages; git commit -am 'v{{version}}' && git push origin gh-pages)
 
 publish-cargo: # publish cargo without verification
